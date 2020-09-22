@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	unsigned short ServPort;     /* Server port */
 	int recvMsgSize;                 /* Size of received message */
 	char buffer[MAX_LENGTH];  // message we get and send to client
-	// initialize array of structs for info_base here... I think
+
 
 
 	if (argc != 2)         /* Test for correct number of parameters */

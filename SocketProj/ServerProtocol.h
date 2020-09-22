@@ -3,17 +3,58 @@
  */
 #ifndef SERVERPROTOCOL_H_
 #define SERVERPROTOCOL_H_
-
-// initialization of server includes initialization of array of user_info structs, called info_base
-struct user_info
+#include <string.h>
+// linked list of user_info structs
+typedef struct user_info
 {
 	char usr_name[16]; // extra space for \0
 	char* usr_ip; // length <= 13
 	int* usr_ports; // array for port #
-	char state; // f = free; r = registered; i = in ring
-};
+	char* state; // f = free; r = registered; i = in ring; l = leader
+	struct user_info* next; // pointer to next user
+	struct user_info* prev;
+} user_info;
 
+typedef struct ring
+{
+	int n; // num of users in ring
+	int id; // ring id; first ring id = 1, id++ for each ring instance
+	int compute_port; // port # of leader that is listened to for compute commands from server
+	user_info* users; // linked list of users in the ring
 
+} ring;
+user_info* get_user(user_info* head, char* cmp)
+{
+	/*
+	 * while ptr != NULL
+	 * compare current username to arg
+	 * if equal return pointer to curr user node
+	 * else continue loop
+	 * if loop ends (ptr == NULL) return NULL ptr
+	 */
+
+	return NULL;
+}
+
+void add_user(user_info* head, user_info* user)
+{
+	/*
+	 * loop to end of list (where next == NULL)
+	 * set next = user
+	 * make sure user->next is NULL
+	 */
+}
+
+void del_user(user_info* head, user_info* user)
+{
+	/*
+	 * ptr = get_user
+	 *
+	 * ptr->prev->next = NULL
+	 * ptr->next->prev = NULL
+	 */
+
+}
 
 /*
 1. register <user-name> <IPv4-address> <port(s)>
@@ -28,7 +69,7 @@ more client processes may run on the same end host. However, the port(s) used fo
 process must be unique on an end host.
 The server takes no action and responds to the client with a return code of FAILURE if the registration request
 is a duplicate, or if there is some other problem with the request.
-*/
+ */
 void register_usr(char* name, char* ip, int* ports)
 {
 	/*
@@ -39,24 +80,23 @@ void register_usr(char* name, char* ip, int* ports)
    	 // check that at least 1 port given
 
 	 // check if usr name is unique
-	 compare name to usr_names in info_base
-	 if matching usr_name in info_base:
+	 if get_user() == NULL
 		 return FAILURE
 
 	 // check for same end-host IP addr.
-	 compare ip to other usr_ip in info_base
-	 if matching ip:
+	 ptr = get_user(head, ip)
+	 if ptr != NULL:
 		check that port #s are unique
 		if matching port #s:
 		 	 return FAILURE
 
 	// add usr to info_base
-	add new info_base to end of info_base
-	increment number of users in info_base
-	store usr info in info_base, where state = f
+	 * create new user and set member values (state = f)
+	 * call add_user
+
 
 	return SUCCESS
-	*/
+	 */
 };
 
 
@@ -65,7 +105,18 @@ void register_usr(char* name, char* ip, int* ports)
 This command returns FAILURE if the user has state InRing. Otherwise,
 the record for user-name is removed from the state information base, and the server responds with SUCCESS.
 The client process making the request then exits the application, i.e., it terminates.
-*/
+ */
+void deregister(char* name)
+{
+	/*
+	 * ptr =  get_user(head, name)
+	 *  if ptr->state != i
+	 *  	del_user(head, ptr)
+	 *  	SUCCESS
+	 *  else
+	 *  	FAILURE
+	 */
+}
 
 
 /*
@@ -86,8 +137,31 @@ will form the O-RING to user-name. The n users are given by tuples consisting of
 user its user-name, IPv4-address, two port(s) for communication in an O-RING, with the tuple of
 user-name listed first. Receipt of SUCCESS at user-name involves several additional steps to accomplish
 the setup of the O-RING. These steps which include ring orientation and leader election are described in x3.1.
-*/
+ */
 
+void setup_ring(int n, char* name)
+{
+	/*
+	 * if ((n is not odd or >= 3) || (# free usrs > 1) || (get_user()->state != f or r))
+	 * 	return FAILURE
+	 * else
+	 * 	create ring struct (use malloc)
+	 * 	add get_user(name) to ring list & set state to i   // user who called setup_ring should be head of ring list
+	 * 	randomly select n-1 free users
+	 *	 	* maybe gen random number < # users and loop through that many times
+	 * 		*  if user is !free
+	 * 				do it again
+	 * 		*  else
+	 * 				add_user to ring list
+	 * 				set user state to i
+	 * 	set values for ring members
+	 * 		num = n
+	 * 		set id *how to keep track of number of rings? just use a static global var?
+	 *
+	 * 	return SUCCESS
+	 * 		print id, n, & formatted user info
+	 */
+}
 
 /*
 4. setup-complete <ring-id> <user-name> <port>
@@ -98,7 +172,15 @@ as the leader, it will listen for compute messages on the port number that is la
 of the ring orientation algorithm. The server should set the state of user-name to Leader in the state
 information base, and store or mark the port of the process to be used in response to any compute commands.
 The server responds to user-name with SUCCESS.
-*/
+ */
+void setup_complete(int id, char* name, int port)
+{
+	/*
+	 * set state of get_user(head, name) to l
+	 * set compute_port in ring to port
+	 * SUCCESS
+	 */
+}
 
 
 /*
@@ -110,7 +192,7 @@ user-name, IPv4-address, and port of the leader of ring-id. (Clearly, any ring t
 process of being torn down should not be selected!) Finally, the return code is set to SUCCESS and the response
 is sent to user-name. Receipt of SUCCESS at the client involves several additional steps to perform the
 computation, and the functions to support, described in x3.2.
-*/
+ */
 
 
 /*
@@ -120,7 +202,7 @@ initiates the deletion of the O-RING with identifier ring-id. This command retur
 user is not the leader of the O-RING. Otherwise, the server responds to the user with SUCCESS. Receipt of
 SUCCESS at the process involves several steps to delete the O-RING, as described in x3.3. Nothing should
 interrupt the tear down of a ring.
-*/
+ */
 
 
 /*
@@ -130,7 +212,7 @@ command indicates that the O-RING with identifier ring-id has been torn down. Th
 if the process making the request is not the leader of the O-RING. Otherwise, the server changes the state of
 each user in the ring to Free; these users may now be used in a future setup-ring or compute functions of
 any other existing O-RING. The server responds to the former leader with SUCCESS.
-*/
+ */
 
 
 
