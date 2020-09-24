@@ -1,16 +1,16 @@
-/*
- * functions called upon reception of commands from client
- */
 #ifndef SERVERPROTOCOL_H_
 #define SERVERPROTOCOL_H_
+
 #include <string.h>
+#include <stdlib.h>
+
 // linked list of user_info structs
 typedef struct user_info
 {
 	char usr_name[16]; // extra space for \0
-	char* usr_ip; // length <= 13
+	char usr_ip[16];
 	int* usr_ports; // array for port #
-	char* state; // f = free; r = registered; i = in ring; l = leader
+	char state; // f = free; r = registered; i = in ring; l = leader
 	struct user_info* next; // pointer to next user
 	struct user_info* prev;
 } user_info;
@@ -21,8 +21,11 @@ typedef struct ring
 	int id; // ring id; first ring id = 1, id++ for each ring instance
 	int compute_port; // port # of leader that is listened to for compute commands from server
 	user_info* users; // linked list of users in the ring
+	ring* next; // pointer to next ring
 
 } ring;
+
+
 user_info* get_user(user_info* head, char* cmp)
 {
 	/*
@@ -56,21 +59,22 @@ void del_user(user_info* head, user_info* user)
 
 }
 
+void add_ring(ring* head, ring* r)
+{
+	// same as add_user but with ring
+}
+
+void del_ring(ring* head, ring* r)
+{
+	// ....
+}
+
+
 /*
-1. register <user-name> <IPv4-address> <port(s)>
-where user-name is an alphabetic string of length at most 15 characters naming the process.
-All users must be registered prior to issuing other any other commands to the server.
-On receipt of a command to register, the server stores the name, IPv4 address, and one or more port numbers
-associated with that user in a state information base. Set the state of the user to Free to indicate that it is not a
-member of any ring. You are welcome to introduce other states for users if you find it useful.
-If the parameters are unique, the server responds to the client with a return code of SUCCESS. Specifically, each
-user-name may only be registered once. The IPv4-address of a user need not be unique, i.e., one or
-more client processes may run on the same end host. However, the port(s) used for communication by each
-process must be unique on an end host.
-The server takes no action and responds to the client with a return code of FAILURE if the registration request
-is a duplicate, or if there is some other problem with the request.
+ * parses, validates, and stores user data if all conditions are met
+ * returns true if SUCCESS and false if FAILURE
  */
-void register_usr(char* name, char* ip, int* ports)
+bool register_usr(char* name, char* ip, int* ports, user_info* head)
 {
 	/*
 	 // check that name fits parameters
@@ -94,9 +98,9 @@ void register_usr(char* name, char* ip, int* ports)
 	 * create new user and set member values (state = f)
 	 * call add_user
 
-
 	return SUCCESS
 	 */
+	return true;
 };
 
 
@@ -106,7 +110,7 @@ This command returns FAILURE if the user has state InRing. Otherwise,
 the record for user-name is removed from the state information base, and the server responds with SUCCESS.
 The client process making the request then exits the application, i.e., it terminates.
  */
-void deregister(char* name)
+bool deregister(char* name, user_info* head)
 {
 	/*
 	 * ptr =  get_user(head, name)
@@ -116,6 +120,7 @@ void deregister(char* name)
 	 *  else
 	 *  	FAILURE
 	 */
+	return true;
 }
 
 
@@ -127,7 +132,7 @@ only participate in one ring at a time.
 This command results in a return code of FAILURE if:
  - The user-name is not registered or is not Free.
  - n !>= 3 or is not odd.
- - There are not at least n 􀀀 1 other Free users, besides user-name, registered with the server.
+ - There are not at least n > 1 other Free users, besides user-name, registered with the server.
 
 Otherwise, the server selects at random n-1 Free users and updates each one’s state to InRing including
 that of user-name. Because you need to support the existence of multiple O-RINGS, assign an identifier for
@@ -139,11 +144,11 @@ user-name listed first. Receipt of SUCCESS at user-name involves several additio
 the setup of the O-RING. These steps which include ring orientation and leader election are described in x3.1.
  */
 
-void setup_ring(int n, char* name)
+ring* setup_ring(int n, char* name, user_info* head)
 {
 	/*
 	 * if ((n is not odd or >= 3) || (# free usrs > 1) || (get_user()->state != f or r))
-	 * 	return FAILURE
+	 * 	return NULL
 	 * else
 	 * 	create ring struct (use malloc)
 	 * 	add get_user(name) to ring list & set state to i   // user who called setup_ring should be head of ring list
@@ -156,11 +161,12 @@ void setup_ring(int n, char* name)
 	 * 				set user state to i
 	 * 	set values for ring members
 	 * 		num = n
-	 * 		set id *how to keep track of number of rings? just use a static global var?
+	 * 		set id *how to keep track of number of rings.. just use a static global var?
+	 * 		set next to NULL
 	 *
-	 * 	return SUCCESS
-	 * 		print id, n, & formatted user info
+	 * 	return pointer to new ring struct
 	 */
+	return NULL;
 }
 
 /*
@@ -173,13 +179,15 @@ of the ring orientation algorithm. The server should set the state of user-name 
 information base, and store or mark the port of the process to be used in response to any compute commands.
 The server responds to user-name with SUCCESS.
  */
-void setup_complete(int id, char* name, int port)
+bool setup_complete(user_info* u_head, ring* r_head, char* id, char* name, int port)
 {
 	/*
+	 * parse id (int), name, port (int)
 	 * set state of get_user(head, name) to l
 	 * set compute_port in ring to port
 	 * SUCCESS
 	 */
+	return true;
 }
 
 
